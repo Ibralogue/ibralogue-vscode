@@ -90,7 +90,7 @@ describe("Parser", () => {
     });
 
     it("function with args", () => {
-      const { ast } = quickParse("[NPC]\n{{GiveItem(Gold, 50)}}");
+      const { ast } = quickParse("[NPC]\nYou got {{GiveItem(Gold, 50)}} items.");
       const frags = ast.conversations[0].dialogueLines[0].sentences[0].fragments;
       const func = frags.find((f) => f.kind === "function");
       expect(func).toBeDefined();

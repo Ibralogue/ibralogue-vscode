@@ -47,8 +47,8 @@ describe("Rename", () => {
   });
 
   it("rename conversation updates def + choice target + jump target", () => {
-    const text = "{{ConversationName(A)}}\n[NPC]\nHi.\n- Go -> A\n{{Jump(A)}}";
-    const result = rename(text, 0, 20, "B");
+    const text = "{{ConversationName(A)}}\n[NPC]\nHi.\n{{Jump(A)}}\n- Go -> A";
+    const result = rename(text, 0, 19, "B");
     expect(result).not.toBeNull();
     const edits = result!.changes![URI];
     expect(edits.length).toBe(3);

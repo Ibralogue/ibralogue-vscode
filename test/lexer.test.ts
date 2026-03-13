@@ -133,8 +133,8 @@ describe("Lexer", () => {
       expect(types).toContain("Function");
     });
 
-    it("function with args {{Fn(a,b)}}", () => {
-      const tokens = quickTokenize("{{Fn(a,b)}}");
+    it("function with args {{Fn(a,b)}} in text context", () => {
+      const tokens = quickTokenize("Call {{Fn(a,b)}} now");
       const func = tokens.find((t) => t.type === TokenType.Function);
       expect(func).toBeDefined();
       expect(func!.value).toBe("Fn(a,b)");

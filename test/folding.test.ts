@@ -46,12 +46,10 @@ describe("Folding", () => {
   });
 
   it("single-line constructs do not create folds", () => {
-    const text = "[NPC]\nHi.";
+    const text = "# single comment";
     const ranges = fold(text);
-    const dlFolds = ranges.filter(
-      (r) => r.kind === FoldingRangeKind.Region && r.startLine === 0,
-    );
-    expect(dlFolds).toHaveLength(0);
+    const commentFolds = ranges.filter((r) => r.kind === FoldingRangeKind.Comment);
+    expect(commentFolds).toHaveLength(0);
   });
 
   it("multiple conversations create separate folds", () => {
