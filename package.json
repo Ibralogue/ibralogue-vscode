@@ -109,7 +109,38 @@
         "id": "defaultLibrary",
         "description": "Built-in commands"
       }
-    ]
+    ],
+    "commands": [
+      {
+        "command": "ibralogue.openTreeView",
+        "title": "Open Dialogue Tree",
+        "category": "Ibralogue",
+        "icon": "$(type-hierarchy)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "ibralogue.openTreeView",
+        "key": "ctrl+shift+i",
+        "mac": "cmd+shift+i",
+        "when": "editorLangId == ibralogue"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "ibralogue.openTreeView",
+          "when": "editorLangId == ibralogue",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "ibralogue.openTreeView",
+          "when": "resourceExtname == .ibra"
+        }
+      ]
+    }
   },
   "repository": {
     "type": "git",
