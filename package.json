@@ -19,13 +19,15 @@
     "vscode:prepublish": "npm run build -- --production",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^20.19.37",
     "@types/vscode": "^1.85.0",
     "esbuild": "^0.24.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
   },
   "contributes": {
     "languages": [
