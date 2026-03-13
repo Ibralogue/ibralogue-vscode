@@ -1,22 +1,41 @@
 {
   "name": "ibralogue",
   "displayName": "Ibralogue",
+  "description": "Language support for the Ibralogue dialogue language",
+  "version": "1.0.0",
+  "publisher": "Ibra",
   "icon": "images/Logo.png",
-  "publisher": "ibra",
-  "description": "Adds support for the greatest Unity dialogue library of all time, Ibralogue.",
-  "version": "0.2.0",
   "engines": {
-    "vscode": "^1.50.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Programming Languages"
   ],
+  "activationEvents": [
+    "onLanguage:ibralogue"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run build -- --production",
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.37",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
+  },
   "contributes": {
     "languages": [
       {
         "id": "ibralogue",
         "aliases": [
-          "Ibralogue"
+          "Ibralogue",
+          "ibra"
         ],
         "extensions": [
           ".ibra"
@@ -30,10 +49,109 @@
         "scopeName": "source.ibralogue",
         "path": "./syntaxes/ibralogue.tmLanguage.json"
       }
-    ]
+    ],
+    "snippets": [
+      {
+        "language": "ibralogue",
+        "path": "./snippets/ibralogue.json"
+      }
+    ],
+    "semanticTokenTypes": [
+      {
+        "id": "namespace",
+        "description": "Conversation names"
+      },
+      {
+        "id": "function",
+        "description": "Function invocations"
+      },
+      {
+        "id": "variable",
+        "description": "Variable references"
+      },
+      {
+        "id": "parameter",
+        "description": "Function arguments"
+      },
+      {
+        "id": "keyword",
+        "description": "Built-in command names"
+      },
+      {
+        "id": "string",
+        "description": "Speaker names, choice text, metadata values"
+      },
+      {
+        "id": "comment",
+        "description": "Comment text"
+      },
+      {
+        "id": "operator",
+        "description": "Arrow operators, metadata prefix"
+      },
+      {
+        "id": "property",
+        "description": "Metadata keys"
+      },
+      {
+        "id": "decorator",
+        "description": "Rich text tags"
+      }
+    ],
+    "semanticTokenModifiers": [
+      {
+        "id": "declaration",
+        "description": "Conversation name definitions"
+      },
+      {
+        "id": "readonly",
+        "description": "Variables (resolved at parse time)"
+      },
+      {
+        "id": "defaultLibrary",
+        "description": "Built-in commands"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ibralogue.openTreeView",
+        "title": "Open Dialogue Tree",
+        "category": "Ibralogue",
+        "icon": "$(type-hierarchy)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "ibralogue.openTreeView",
+        "key": "ctrl+shift+i",
+        "mac": "cmd+shift+i",
+        "when": "editorLangId == ibralogue"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "ibralogue.openTreeView",
+          "when": "editorLangId == ibralogue",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "ibralogue.openTreeView",
+          "when": "resourceExtname == .ibra"
+        }
+      ]
+    }
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Ibralogue/ibralogue-vsc-extension.git"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
   }
 }

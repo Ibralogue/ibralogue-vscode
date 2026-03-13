@@ -1,95 +1,149 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Ibralogue",
-
+  "scopeName": "source.ibralogue",
   "patterns": [
-    {
-      "include": "#comments"
-    },
-    {
-      "include": "#functions"
-    },
-    {
-      "include": "#variables"
-    },
-    {
-      "include": "#choices"
-    }
+    { "include": "#comment" },
+    { "include": "#conversationCommand" },
+    { "include": "#builtinCommand" },
+    { "include": "#includeCommand" },
+    { "include": "#speaker" },
+    { "include": "#choice" },
+    { "include": "#textLine" }
   ],
-
   "repository": {
-    "comments": {
-      "name": "comment.line.number-sign.ibralogue",
-      "match": "^#.*$"
+    "comment": {
+      "match": "^\\s*(#)(?!#)(.*)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.comment.ibralogue" },
+        "2": { "name": "comment.line.number-sign.ibralogue" }
+      }
     },
-    "functions": {
+    "conversationCommand": {
+      "match": "^\\s*(\\{\\{)(ConversationName)(\\()([^)]*)(\\))(\\}\\})\\s*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.command.begin.ibralogue" },
+        "2": { "name": "keyword.control.conversation.ibralogue" },
+        "3": { "name": "punctuation.parenthesis.open.ibralogue" },
+        "4": { "name": "entity.name.section.conversation.ibralogue" },
+        "5": { "name": "punctuation.parenthesis.close.ibralogue" },
+        "6": { "name": "punctuation.definition.command.end.ibralogue" }
+      }
+    },
+    "builtinCommand": {
+      "match": "^\\s*(\\{\\{)(Jump|Image)(\\()([^)]*)(\\))(\\}\\})\\s*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.command.begin.ibralogue" },
+        "2": { "name": "keyword.control.builtin.ibralogue" },
+        "3": { "name": "punctuation.parenthesis.open.ibralogue" },
+        "4": { "name": "string.unquoted.argument.ibralogue" },
+        "5": { "name": "punctuation.parenthesis.close.ibralogue" },
+        "6": { "name": "punctuation.definition.command.end.ibralogue" }
+      }
+    },
+    "includeCommand": {
+      "match": "^\\s*(\\{\\{)(Include)(\\()([^)]*)(\\))(\\}\\})\\s*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.command.begin.ibralogue" },
+        "2": { "name": "keyword.control.include.ibralogue" },
+        "3": { "name": "punctuation.parenthesis.open.ibralogue" },
+        "4": { "name": "string.unquoted.path.ibralogue" },
+        "5": { "name": "punctuation.parenthesis.close.ibralogue" },
+        "6": { "name": "punctuation.definition.command.end.ibralogue" }
+      }
+    },
+    "speaker": {
+      "match": "^\\s*(\\[)([^\\]]*)(\\])",
+      "captures": {
+        "1": { "name": "punctuation.definition.speaker.begin.ibralogue" },
+        "2": {
+          "name": "entity.name.tag.speaker.ibralogue",
+          "patterns": [{ "include": "#variable" }]
+        },
+        "3": { "name": "punctuation.definition.speaker.end.ibralogue" }
+      }
+    },
+    "choice": {
+      "match": "^\\s*(-)\\s+(.*?)(\\s*->\\s*)(\\S+)(.*)$",
+      "captures": {
+        "1": { "name": "punctuation.definition.choice.ibralogue" },
+        "2": {
+          "name": "string.unquoted.choice-text.ibralogue",
+          "patterns": [{ "include": "#variable" }]
+        },
+        "3": { "name": "keyword.operator.arrow.ibralogue" },
+        "4": {
+          "name": "entity.name.section.choice-target.ibralogue",
+          "patterns": [{ "include": "#variable" }]
+        },
+        "5": { "patterns": [{ "include": "#trailingMetadata" }] }
+      }
+    },
+    "textLine": {
+      "begin": "^(?!\\s*#)(?!\\s*\\[)(?!\\s*-)(?!\\s*\\{\\{(?:ConversationName|Jump|Image|Include)\\()(?=\\S)",
+      "end": "$",
       "patterns": [
-        {
-          "name": "keyword.other.ibralogue",
-          "begin": "\\{\\{",
-          "end": "\\}\\}",
+        { "include": "#escapeSequence" },
+        { "include": "#trailingMetadata" },
+        { "include": "#inlineFunction" },
+        { "include": "#variable" },
+        { "include": "#richTextTag" }
+      ]
+    },
+    "inlineFunction": {
+      "match": "(\\{\\{)([^}(]+)(?:(\\()([^)]*)(\\)))?(\\}\\})",
+      "captures": {
+        "1": { "name": "punctuation.definition.function.begin.ibralogue" },
+        "2": { "name": "entity.name.function.ibralogue" },
+        "3": { "name": "punctuation.parenthesis.open.ibralogue" },
+        "4": {
+          "name": "variable.parameter.function.ibralogue",
+          "patterns": [{ "include": "#variable" }]
+        },
+        "5": { "name": "punctuation.parenthesis.close.ibralogue" },
+        "6": { "name": "punctuation.definition.function.end.ibralogue" }
+      }
+    },
+    "variable": {
+      "match": "(\\$)([a-zA-Z0-9]+)",
+      "captures": {
+        "1": { "name": "punctuation.definition.variable.ibralogue" },
+        "2": { "name": "variable.other.global.ibralogue" }
+      }
+    },
+    "trailingMetadata": {
+      "match": "(##)\\s*(.*?)\\s*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.metadata.ibralogue" },
+        "2": {
+          "name": "comment.block.metadata.ibralogue",
           "patterns": [
             {
-              "comment": "function that is being invoked",
-              "match": "(?<=\\{\\{)\\w+",
-              "name": "entity.name.function.ibralogue"
+              "match": "([^:\\s]+)(:)([^\\s]+)",
+              "captures": {
+                "1": { "name": "entity.other.attribute-name.metadata-key.ibralogue" },
+                "2": { "name": "punctuation.separator.colon.ibralogue" },
+                "3": {
+                  "name": "string.unquoted.metadata-value.ibralogue",
+                  "patterns": [{ "include": "#variable" }]
+                }
+              }
             },
             {
-              "include": "#strings"
-            },
-            {
-              "include": "#numbers"
+              "match": "[^\\s:]+",
+              "name": "entity.other.attribute-name.metadata-tag.ibralogue"
             }
           ]
         }
-      ]
+      }
     },
-    "keywords": {
-      "patterns": [
-        {
-          "name": "storage.modifier.ibralogue",
-          "match": "\\b(DialogueName|DialogueEnd)\\b"
-        }
-      ]
+    "escapeSequence": {
+      "match": "\\\\(\\{\\{|\\$|##|#|\\[|\\-|\\\\)",
+      "name": "constant.character.escape.ibralogue"
     },
-    "variables": {
-      "name": "entity.name.variable.local.ibralogue",
-      "match": "\\$\\w+"
-    },
-    "choices": {
-      "name": "keyword.operator.arithmetic.ibralogue",
-      "patterns": [
-        {
-          "name": "keyword.operator.arithmetic.ibralogue",
-          "match": "^-"
-        },
-        {
-          "name": "keyword.operator.arithmetic.ibralogue",
-          "match": "->(?=.*)"
-        },
-        {
-          "name": "entity.name.function.ibralogue",
-          "match": "(?<=->).*"
-        }
-      ]
-    },
-
-    "strings": {
-      "name": "string.quoted.double.ibralogue",
-      "begin": "\"",
-      "end": "\"",
-      "patterns": [
-        {
-          "name": "constant.character.escape.ibralogue",
-          "match": "\\\\."
-        }
-      ]
-    },
-    "numbers": {
-      "name": "constant.numeric",
-      "match": "\\b([+-]?([0-9]*[.])?[0-9]+)\\b"
+    "richTextTag": {
+      "match": "</?[a-zA-Z][^>]*>",
+      "name": "meta.tag.richtext.ibralogue"
     }
-  },
-
-  "scopeName": "source.ibralogue"
+  }
 }
