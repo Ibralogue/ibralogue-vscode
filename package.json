@@ -3,7 +3,7 @@
   "displayName": "Ibralogue",
   "description": "Language support for the Ibralogue dialogue language",
   "version": "1.0.0",
-  "publisher": "ibralogue",
+  "publisher": "Ibra",
   "icon": "images/Logo.png",
   "engines": {
     "vscode": "^1.85.0"

@@ -3,8 +3,10 @@
 .gitignore
 .gitattributes
 src/**
+test/**
 node_modules/**
 *.vsix
 esbuild.mjs
 tsconfig.json
+vitest.config.ts
 ibralogue-vscode-extension-spec.md
