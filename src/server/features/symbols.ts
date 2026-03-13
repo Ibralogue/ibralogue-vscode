@@ -1,72 +1,82 @@
-import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
-import { DialogueTree, Conversation, DialogueLine, Sentence, ChoiceNode } from "../parser/ast";
+import { DocumentSymbol, SymbolKind, Range } from "vscode-languageserver/node";
+import { DialogueTree, Conversation, DialogueLine, Sentence, ChoiceNode, Range as AstRange } from "../parser/ast";
 
 export function getDocumentSymbols(ast: DialogueTree): DocumentSymbol[] {
   const symbols: DocumentSymbol[] = [];
   for (const conv of ast.conversations) {
-    symbols.push(buildConversationSymbol(conv));
+    const sym = buildConversationSymbol(conv);
+    if (sym) symbols.push(sym);
   }
   return symbols;
 }
 
-function buildConversationSymbol(conv: Conversation): DocumentSymbol {
+function buildConversationSymbol(conv: Conversation): DocumentSymbol | null {
+  const range = conv.fullRange;
+  const selectionRange = clamp(conv.nameRange ?? range, range);
   const children: DocumentSymbol[] = [];
 
   for (const dl of conv.dialogueLines) {
-    children.push(buildDialogueLineSymbol(dl));
+    const sym = buildDialogueLineSymbol(dl, range);
+    if (sym) children.push(sym);
   }
 
   for (const choice of conv.choices) {
-    children.push(buildChoiceSymbol(choice));
+    const sym = buildChoiceSymbol(choice, range);
+    if (sym) children.push(sym);
   }
-
-  const nameRange = conv.nameRange ?? conv.fullRange;
 
   return {
     name: `Conversation "${conv.name}"`,
     kind: SymbolKind.Namespace,
-    range: conv.fullRange,
-    selectionRange: nameRange,
+    range,
+    selectionRange,
     children,
   };
 }
 
-function buildDialogueLineSymbol(dl: DialogueLine): DocumentSymbol {
+function buildDialogueLineSymbol(dl: DialogueLine, parentRange: AstRange): DocumentSymbol | null {
+  const range = enclose(dl.range, parentRange);
+  const selectionRange = clamp(dl.speakerRange, range);
   const children: DocumentSymbol[] = [];
 
   for (const sent of dl.sentences) {
-    children.push(...buildSentenceSymbols(sent));
+    for (const sym of buildSentenceSymbols(sent, range)) {
+      children.push(sym);
+    }
   }
 
   if (dl.image) {
+    const ir = enclose(dl.image.range, range);
     children.push({
       name: `{{Image(${dl.image.path})}}`,
       kind: SymbolKind.File,
-      range: dl.image.range,
-      selectionRange: dl.image.pathRange,
+      range: ir,
+      selectionRange: clamp(dl.image.pathRange, ir),
     });
   }
 
   if (dl.jump) {
+    const jr = enclose(dl.jump.range, range);
     children.push({
       name: `{{Jump(${dl.jump.target})}}`,
       kind: SymbolKind.Function,
-      range: dl.jump.range,
-      selectionRange: dl.jump.targetRange,
+      range: jr,
+      selectionRange: clamp(dl.jump.targetRange, jr),
     });
   }
 
   return {
     name: `[${dl.speaker}]`,
     kind: SymbolKind.String,
-    range: dl.range,
-    selectionRange: dl.speakerRange,
+    range,
+    selectionRange,
     children,
   };
 }
 
-function buildSentenceSymbols(sent: Sentence): DocumentSymbol[] {
+function buildSentenceSymbols(sent: Sentence, parentRange: AstRange): DocumentSymbol[] {
   const symbols: DocumentSymbol[] = [];
+  const sentRange = enclose(sent.range, parentRange);
 
   const textParts: string[] = [];
   for (const frag of sent.fragments) {
@@ -81,37 +91,40 @@ function buildSentenceSymbols(sent: Sentence): DocumentSymbol[] {
     symbols.push({
       name: preview,
       kind: SymbolKind.String,
-      range: sent.range,
-      selectionRange: sent.range,
+      range: sentRange,
+      selectionRange: sentRange,
     });
   }
 
   for (const frag of sent.fragments) {
     if (frag.kind === "function") {
+      const fr = enclose(frag.range, sentRange);
       symbols.push({
         name: `{{${frag.name}}}`,
         kind: SymbolKind.Function,
-        range: frag.range,
-        selectionRange: frag.nameRange,
+        range: fr,
+        selectionRange: clamp(frag.nameRange, fr),
       });
     }
     if (frag.kind === "variable") {
+      const vr = enclose(frag.range, sentRange);
       symbols.push({
         name: `$${frag.name}`,
         kind: SymbolKind.Variable,
-        range: frag.range,
-        selectionRange: frag.nameRange,
+        range: vr,
+        selectionRange: clamp(frag.nameRange, vr),
       });
     }
   }
 
   if (sent.metadata) {
     for (const m of sent.metadata) {
+      const mr = enclose(m.range, sentRange);
       symbols.push({
         name: m.isTag ? m.key : `${m.key}:${m.value}`,
         kind: SymbolKind.Property,
-        range: m.range,
-        selectionRange: m.keyRange,
+        range: mr,
+        selectionRange: clamp(m.keyRange, mr),
       });
     }
   }
@@ -119,7 +132,8 @@ function buildSentenceSymbols(sent: Sentence): DocumentSymbol[] {
   return symbols;
 }
 
-function buildChoiceSymbol(choice: ChoiceNode): DocumentSymbol {
+function buildChoiceSymbol(choice: ChoiceNode, parentRange: AstRange): DocumentSymbol {
+  const range = enclose(choice.range, parentRange);
   const label = choice.target
     ? `"${choice.text}" -> ${choice.target}`
     : `"${choice.text}"`;
@@ -127,7 +141,25 @@ function buildChoiceSymbol(choice: ChoiceNode): DocumentSymbol {
   return {
     name: `Choice: ${label}`,
     kind: SymbolKind.Event,
-    range: choice.range,
-    selectionRange: choice.textRange,
+    range,
+    selectionRange: clamp(choice.textRange, range),
   };
+}
+
+function posBefore(a: AstRange["start"], b: AstRange["start"]): boolean {
+  return a.line < b.line || (a.line === b.line && a.character <= b.character);
+}
+
+function clamp(inner: AstRange, outer: AstRange): Range {
+  const start = posBefore(outer.start, inner.start) ? inner.start : outer.start;
+  const end = posBefore(inner.end, outer.end) ? inner.end : outer.end;
+  const safeEnd = posBefore(start, end) ? end : start;
+  return { start, end: safeEnd };
+}
+
+function enclose(child: AstRange, parent: AstRange): Range {
+  const start = posBefore(parent.start, child.start) ? child.start : parent.start;
+  const end = posBefore(child.end, parent.end) ? child.end : parent.end;
+  const safeEnd = posBefore(start, end) ? end : start;
+  return { start, end: safeEnd };
 }
