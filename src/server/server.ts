@@ -5,6 +5,7 @@ import {
   InitializeParams,
   InitializeResult,
   TextDocumentSyncKind,
+  SemanticTokensRequest,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { Token, DialogueTree } from "./parser/ast";
@@ -17,6 +18,12 @@ import { getHover } from "./features/hover";
 import { getDefinition } from "./features/definition";
 import { getReferences } from "./features/references";
 import { prepareRename, doRename } from "./features/rename";
+import { getDocumentSymbols } from "./features/symbols";
+import { getFoldingRanges } from "./features/folding";
+import { getSemanticTokens, semanticTokensLegend } from "./features/semanticTokens";
+import { getCodeActions } from "./features/codeActions";
+import { getCodeLenses } from "./features/codeLens";
+import { getDocumentColors, getColorPresentations } from "./features/colorDecorations";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -40,6 +47,15 @@ connection.onInitialize((_params: InitializeParams): InitializeResult => {
       definitionProvider: true,
       referencesProvider: true,
       renameProvider: { prepareProvider: true },
+      documentSymbolProvider: true,
+      foldingRangeProvider: true,
+      semanticTokensProvider: {
+        legend: semanticTokensLegend,
+        full: true,
+      },
+      codeActionProvider: true,
+      codeLensProvider: { resolveProvider: false },
+      colorProvider: true,
     },
   };
 });
@@ -105,6 +121,46 @@ connection.onRenameRequest((params) => {
   const state = documentStates.get(params.textDocument.uri);
   if (!state) return null;
   return doRename(params.position, params.newName, params.textDocument.uri, state.ast, state.index);
+});
+
+connection.onDocumentSymbol((params) => {
+  const state = documentStates.get(params.textDocument.uri);
+  if (!state) return [];
+  return getDocumentSymbols(state.ast);
+});
+
+connection.onFoldingRanges((params) => {
+  const state = documentStates.get(params.textDocument.uri);
+  if (!state) return [];
+  return getFoldingRanges(state.ast, state.tokens);
+});
+
+connection.onRequest(SemanticTokensRequest.type, (params) => {
+  const state = documentStates.get(params.textDocument.uri);
+  if (!state) return { data: [] };
+  return getSemanticTokens(state.ast, state.tokens);
+});
+
+connection.onCodeAction((params) => {
+  const state = documentStates.get(params.textDocument.uri);
+  if (!state) return [];
+  return getCodeActions(params, state.ast);
+});
+
+connection.onCodeLens((params) => {
+  const state = documentStates.get(params.textDocument.uri);
+  if (!state) return [];
+  return getCodeLenses(params.textDocument.uri, state.ast, state.index);
+});
+
+connection.onDocumentColor((params) => {
+  const state = documentStates.get(params.textDocument.uri);
+  if (!state) return [];
+  return getDocumentColors(state.ast);
+});
+
+connection.onColorPresentation((params) => {
+  return getColorPresentations(params.color, params.range);
 });
 
 documents.listen(connection);

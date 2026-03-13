@@ -53,6 +53,23 @@
         "language": "ibralogue",
         "path": "./snippets/ibralogue.json"
       }
+    ],
+    "semanticTokenTypes": [
+      { "id": "namespace", "description": "Conversation names" },
+      { "id": "function", "description": "Function invocations" },
+      { "id": "variable", "description": "Variable references" },
+      { "id": "parameter", "description": "Function arguments" },
+      { "id": "keyword", "description": "Built-in command names" },
+      { "id": "string", "description": "Speaker names, choice text, metadata values" },
+      { "id": "comment", "description": "Comment text" },
+      { "id": "operator", "description": "Arrow operators, metadata prefix" },
+      { "id": "property", "description": "Metadata keys" },
+      { "id": "decorator", "description": "Rich text tags" }
+    ],
+    "semanticTokenModifiers": [
+      { "id": "declaration", "description": "Conversation name definitions" },
+      { "id": "readonly", "description": "Variables (resolved at parse time)" },
+      { "id": "defaultLibrary", "description": "Built-in commands" }
     ]
   },
   "repository": {
