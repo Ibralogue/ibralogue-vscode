@@ -24,6 +24,7 @@ import { getSemanticTokens, semanticTokensLegend } from "./features/semanticToke
 import { getCodeActions } from "./features/codeActions";
 import { getCodeLenses } from "./features/codeLens";
 import { getDocumentColors, getColorPresentations } from "./features/colorDecorations";
+import { buildDialogueGraph } from "./features/graphBuilder";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -161,6 +162,12 @@ connection.onDocumentColor((params) => {
 
 connection.onColorPresentation((params) => {
   return getColorPresentations(params.color, params.range);
+});
+
+connection.onRequest("ibralogue/getGraph", (params: { uri: string }) => {
+  const state = documentStates.get(params.uri);
+  if (!state) return null;
+  return buildDialogueGraph(state.ast);
 });
 
 documents.listen(connection);
