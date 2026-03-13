@@ -1,4 +1,10 @@
 .vscode/**
-.vscode-test/**
+.git/**
 .gitignore
-vsc-extension-quickstart.md
+.gitattributes
+src/**
+node_modules/**
+*.vsix
+esbuild.mjs
+tsconfig.json
+ibralogue-vscode-extension-spec.md

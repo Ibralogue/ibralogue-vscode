@@ -1,0 +1,104 @@
+{
+  "New Conversation": {
+    "prefix": "conv",
+    "body": [
+      "{{ConversationName(${1:Name})}}",
+      "[${2:Speaker}]",
+      "${3:Dialogue text}",
+      "$0"
+    ],
+    "description": "New conversation block"
+  },
+  "Speaker Line": {
+    "prefix": "speak",
+    "body": [
+      "[${1:Speaker}]",
+      "${2:Dialogue text}",
+      "$0"
+    ],
+    "description": "New speaker with dialogue"
+  },
+  "Choice": {
+    "prefix": "choice",
+    "body": [
+      "- ${1:Choice text} -> ${2:TargetConversation}$0"
+    ],
+    "description": "Choice declaration"
+  },
+  "Choice with Metadata": {
+    "prefix": "choicem",
+    "body": [
+      "- ${1:Choice text} -> ${2:TargetConversation} ## ${3:key}:${4:value}$0"
+    ],
+    "description": "Choice with metadata"
+  },
+  "Jump": {
+    "prefix": "jump",
+    "body": [
+      "{{Jump(${1:TargetConversation})}}$0"
+    ],
+    "description": "Jump to another conversation"
+  },
+  "Image": {
+    "prefix": "image",
+    "body": [
+      "{{Image(${1:Sprites/Path})}}$0"
+    ],
+    "description": "Set speaker portrait"
+  },
+  "Include": {
+    "prefix": "include",
+    "body": [
+      "{{Include(${1:AssetName})}}$0"
+    ],
+    "description": "Include another dialogue file"
+  },
+  "Include Conversation": {
+    "prefix": "includec",
+    "body": [
+      "{{Include(${1:AssetName}, ${2:ConversationName})}}$0"
+    ],
+    "description": "Include a specific conversation from another file"
+  },
+  "Function": {
+    "prefix": "func",
+    "body": [
+      "{{${1:FunctionName}($2)}}$0"
+    ],
+    "description": "Inline function invocation"
+  },
+  "Variable": {
+    "prefix": "var",
+    "body": [
+      "\\$${1:VARIABLENAME}$0"
+    ],
+    "description": "Global variable reference"
+  },
+  "Metadata": {
+    "prefix": "meta",
+    "body": [
+      "## ${1:key}:${2:value}$0"
+    ],
+    "description": "Metadata annotation"
+  },
+  "Branching Dialogue": {
+    "prefix": "branch",
+    "body": [
+      "{{ConversationName(${1:Initial})}}",
+      "[${2:NPC}]",
+      "${3:Question text}",
+      "- ${4:Choice A} -> ${5:ConversationA}",
+      "- ${6:Choice B} -> ${7:ConversationB}",
+      "",
+      "{{ConversationName(${5:ConversationA})}}",
+      "[${2:NPC}]",
+      "${8:Response A}",
+      "",
+      "{{ConversationName(${7:ConversationB})}}",
+      "[${2:NPC}]",
+      "${9:Response B}",
+      "$0"
+    ],
+    "description": "Complete branching dialogue with two choices"
+  }
+}

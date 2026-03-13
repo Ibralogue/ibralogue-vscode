@@ -1,2 +1,5 @@
-node_modules
+node_modules/
+dist/
 *.vsix
+.vscode-test/
+ibralogue-vscode-extension-spec.md

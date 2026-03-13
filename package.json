@@ -1,22 +1,39 @@
 {
-  "name": "ibralogue",
+  "name": "ibralogue-vscode",
   "displayName": "Ibralogue",
-  "icon": "images/Logo.png",
-  "publisher": "ibra",
-  "description": "Adds support for the greatest Unity dialogue library of all time, Ibralogue.",
+  "description": "Language support for the Ibralogue dialogue scripting language",
   "version": "0.2.0",
+  "publisher": "ibralogue",
+  "icon": "images/Logo.png",
   "engines": {
-    "vscode": "^1.50.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Programming Languages"
   ],
+  "activationEvents": [
+    "onLanguage:ibralogue"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run build -- --production",
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.37",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  },
   "contributes": {
     "languages": [
       {
         "id": "ibralogue",
         "aliases": [
-          "Ibralogue"
+          "Ibralogue",
+          "ibra"
         ],
         "extensions": [
           ".ibra"
@@ -30,10 +47,17 @@
         "scopeName": "source.ibralogue",
         "path": "./syntaxes/ibralogue.tmLanguage.json"
       }
+    ],
+    "snippets": [
+      {
+        "language": "ibralogue",
+        "path": "./snippets/ibralogue.json"
+      }
     ]
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Ibralogue/ibralogue-vsc-extension.git"
-  }
+  },
+  "license": "SEE LICENSE IN LICENSE"
 }
