@@ -177,16 +177,20 @@ function posBefore(a: AstRange["start"], b: AstRange["start"]): boolean {
   return a.line < b.line || (a.line === b.line && a.character <= b.character);
 }
 
+function clampPos(pos: AstRange["start"], min: AstRange["start"], max: AstRange["start"]): AstRange["start"] {
+  if (posBefore(pos, min)) return min;
+  if (posBefore(max, pos)) return max;
+  return pos;
+}
+
 function clamp(inner: AstRange, outer: AstRange): Range {
-  const start = posBefore(outer.start, inner.start) ? inner.start : outer.start;
-  const end = posBefore(inner.end, outer.end) ? inner.end : outer.end;
-  const safeEnd = posBefore(start, end) ? end : start;
-  return { start, end: safeEnd };
+  const start = clampPos(inner.start, outer.start, outer.end);
+  const end = clampPos(inner.end, outer.start, outer.end);
+  return posBefore(start, end) ? { start, end } : { start, end: start };
 }
 
 function enclose(child: AstRange, parent: AstRange): Range {
-  const start = posBefore(parent.start, child.start) ? child.start : parent.start;
-  const end = posBefore(child.end, parent.end) ? child.end : parent.end;
-  const safeEnd = posBefore(start, end) ? end : start;
-  return { start, end: safeEnd };
+  const start = clampPos(child.start, parent.start, parent.end);
+  const end = clampPos(child.end, parent.start, parent.end);
+  return posBefore(start, end) ? { start, end } : { start, end: start };
 }

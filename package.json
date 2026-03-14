@@ -2,7 +2,7 @@
   "name": "ibralogue",
   "displayName": "Ibralogue",
   "description": "Language support for the Ibralogue dialogue language",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "publisher": "Ibra",
   "icon": "images/Logo.png",
   "engines": {

@@ -45,6 +45,7 @@ export class TreeViewProvider implements vscode.Disposable {
   private disposables: vscode.Disposable[] = [];
   private updateTimer: ReturnType<typeof setTimeout> | undefined;
   private trackedUri: string | undefined;
+  private webviewReady = false;
 
   constructor(
     private client: LanguageClient,
@@ -89,6 +90,7 @@ export class TreeViewProvider implements vscode.Disposable {
 
     this.panel.onDidDispose(() => {
       this.panel = undefined;
+      this.webviewReady = false;
       this.disposeListeners();
     }, undefined, this.disposables);
 
@@ -103,7 +105,7 @@ export class TreeViewProvider implements vscode.Disposable {
     this.disposables.push(
       vscode.window.onDidChangeTextEditorSelection((e) => {
         if (e.textEditor.document.uri.toString() !== this.trackedUri) return;
-        if (!this.panel) return;
+        if (!this.panel || !this.webviewReady) return;
         const line = e.selections[0].active.line;
         this.panel.webview.postMessage({ type: "highlightLine", line });
       }),
@@ -122,6 +124,7 @@ export class TreeViewProvider implements vscode.Disposable {
   private async onWebviewMessage(msg: { type: string; line?: number; column?: number; svg?: string }) {
     switch (msg.type) {
       case "ready":
+        this.webviewReady = true;
         this.requestUpdate();
         break;
       case "navigateTo":
@@ -153,7 +156,7 @@ export class TreeViewProvider implements vscode.Disposable {
   }
 
   private async requestUpdate() {
-    if (!this.panel || !this.trackedUri) return;
+    if (!this.panel || !this.trackedUri || !this.webviewReady) return;
     try {
       const graph: DialogueGraph | null = await this.client.sendRequest("ibralogue/getGraph", { uri: this.trackedUri });
       if (graph && this.panel) {

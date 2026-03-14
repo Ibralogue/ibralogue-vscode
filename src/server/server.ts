@@ -127,7 +127,11 @@ connection.onRenameRequest((params) => {
 connection.onDocumentSymbol((params) => {
   const state = documentStates.get(params.textDocument.uri);
   if (!state) return [];
-  return getDocumentSymbols(state.ast);
+  try {
+    return getDocumentSymbols(state.ast);
+  } catch {
+    return [];
+  }
 });
 
 connection.onFoldingRanges((params) => {
