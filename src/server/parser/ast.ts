@@ -1,3 +1,5 @@
+// ── Primitives ──────────────────────────────────────────────────────
+
 export interface Position {
   line: number;
   character: number;
@@ -7,6 +9,8 @@ export interface Range {
   start: Position;
   end: Position;
 }
+
+// ── Tokens ──────────────────────────────────────────────────────────
 
 export enum TokenType {
   Speaker = "Speaker",
@@ -28,6 +32,8 @@ export interface Token {
   range: Range;
 }
 
+// ── AST: Tree Structure ─────────────────────────────────────────────
+
 export interface DialogueTree {
   conversations: Conversation[];
 }
@@ -39,8 +45,13 @@ export interface Conversation {
   commandRange?: Range;
   dialogueLines: DialogueLine[];
   choices: ChoiceNode[];
+  conditionals: ConditionalBlock[];
+  setCommands: SetCommand[];
+  globalDecls: GlobalDecl[];
   isDefault: boolean;
 }
+
+// ── AST: Dialogue Lines ─────────────────────────────────────────────
 
 export interface DialogueLine {
   speaker: string;
@@ -49,6 +60,7 @@ export interface DialogueLine {
   sentences: Sentence[];
   image?: ImageCommand;
   jump?: JumpCommand;
+  isSilent: boolean;
 }
 
 export interface Sentence {
@@ -90,6 +102,8 @@ export interface EscapeSequenceFragment {
   range: Range;
 }
 
+// ── AST: Metadata ───────────────────────────────────────────────────
+
 export interface MetadataEntry {
   key: string;
   value: string;
@@ -99,6 +113,8 @@ export interface MetadataEntry {
   isTag: boolean;
 }
 
+// ── AST: Choices ────────────────────────────────────────────────────
+
 export interface ChoiceNode {
   text: string;
   target: string;
@@ -107,7 +123,10 @@ export interface ChoiceNode {
   targetRange: Range;
   arrowRange: Range;
   metadata: MetadataEntry[];
+  isContinue: boolean;
 }
+
+// ── AST: Built-in Commands ──────────────────────────────────────────
 
 export interface ImageCommand {
   path: string;
@@ -128,6 +147,37 @@ export interface IncludeCommand {
   assetRange: Range;
   conversationRange?: Range;
 }
+
+// ── AST: Conditionals (v1.0.0) ─────────────────────────────────────
+
+export interface ConditionalBlock {
+  branches: ConditionalBranch[];
+  range: Range;
+}
+
+export interface ConditionalBranch {
+  keyword: "If" | "ElseIf" | "Else";
+  condition?: string;
+  keywordRange: Range;
+}
+
+// ── AST: Variable Commands (v1.0.0) ────────────────────────────────
+
+export interface SetCommand {
+  variableName: string;
+  expression: string;
+  range: Range;
+  variableRange: Range;
+}
+
+export interface GlobalDecl {
+  variableName: string;
+  expression?: string;
+  range: Range;
+  variableRange: Range;
+}
+
+// ── Document-Level Metadata (used by features) ─────────────────────
 
 export interface DocumentModel {
   uri: string;
@@ -176,7 +226,9 @@ export interface VariableUsage {
     | "metadata"
     | "functionArg"
     | "jumpTarget"
-    | "imagePath";
+    | "imagePath"
+    | "set"
+    | "global";
 }
 
 export interface FunctionUsage {

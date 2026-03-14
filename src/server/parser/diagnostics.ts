@@ -1,4 +1,5 @@
 import { Token, TokenType, DialogueTree, Range } from "./ast";
+import { CONTINUE_TARGET } from "./keywords";
 import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver/node";
 
 export function computeDiagnostics(
@@ -16,7 +17,6 @@ export function computeDiagnostics(
   checkDuplicateConversationNames(ast, out);
   checkUndefinedChoiceTargets(ast, out);
   checkUndefinedJumpTargets(ast, out);
-  checkUnreferencedConversations(ast, out);
 
   return out;
 }
@@ -112,7 +112,7 @@ function checkUndefinedChoiceTargets(ast: DialogueTree, out: Diagnostic[]) {
   const names = new Set(ast.conversations.map((c) => c.name));
   for (const conv of ast.conversations) {
     for (const choice of conv.choices) {
-      if (choice.target && !names.has(choice.target)) {
+      if (choice.target && choice.target !== CONTINUE_TARGET && !names.has(choice.target)) {
         out.push(
           diag(
             choice.targetRange,
@@ -140,29 +140,6 @@ function checkUndefinedJumpTargets(ast: DialogueTree, out: Diagnostic[]) {
           ),
         );
       }
-    }
-  }
-}
-
-function checkUnreferencedConversations(ast: DialogueTree, out: Diagnostic[]) {
-  const referenced = new Set<string>();
-  for (const conv of ast.conversations) {
-    for (const choice of conv.choices) {
-      if (choice.target) referenced.add(choice.target);
-    }
-    for (const dl of conv.dialogueLines) {
-      if (dl.jump) referenced.add(dl.jump.target);
-    }
-  }
-
-  // First conversation is the entry point, skip it
-  for (let i = 1; i < ast.conversations.length; i++) {
-    const conv = ast.conversations[i];
-    if (!referenced.has(conv.name)) {
-      const range = conv.commandRange ?? conv.fullRange;
-      out.push(
-        diag(range, DiagnosticSeverity.Warning, "IBR112", `Conversation '${conv.name}' is never referenced`),
-      );
     }
   }
 }

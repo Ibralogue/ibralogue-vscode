@@ -1,4 +1,5 @@
 import { Token, TokenType } from "./ast";
+import { NO_PAREN_KEYWORDS, VAR_NAME_CHAR } from "./keywords";
 
 export function tokenize(text: string): Token[] {
   const lines = text.split(/\r\n|\r|\n/);
@@ -16,14 +17,15 @@ export function tokenize(text: string): Token[] {
   return tokens;
 }
 
-// Disambiguation rules are order-dependent.
+// ── Line-level disambiguation (order-dependent) ────────────────────
+
 function tokenizeLine(line: string, lineNum: number, out: Token[]): void {
   const trimmed = line.trimStart();
   const indent = line.length - trimmed.length;
 
   if (trimmed.length === 0) return;
 
-  // Escaped line start: \# \[ \- \{{
+  // Escaped line-start syntax: \# \[ \- \{{
   if (trimmed[0] === "\\") {
     const after = trimmed.substring(1);
     if (
@@ -67,25 +69,52 @@ function tokenizeLine(line: string, lineNum: number, out: Token[]): void {
   tokenizeTextLine(line, lineNum, out);
 }
 
-// {{Name(arg)}} with only trailing whitespace is a command.
-// {{Name}} (no parens) is NOT a command.
-function isCommandLine(trimmed: string): boolean {
-  let i = 2;
+// ── Command detection ──────────────────────────────────────────────
 
+/**
+ * Returns true when the trimmed line is a standalone command.
+ *
+ * Two forms are accepted:
+ *   1. `{{Name(args)}}` — standard command with parenthesised arguments.
+ *      Parentheses may be nested (e.g. `{{If(($A OR $B) AND $C)}}`).
+ *   2. `{{Keyword}}`   — no-paren form, only for known structural keywords
+ *      like `Else` and `EndIf`.
+ *
+ * In both cases only trailing whitespace is allowed after the `}}`.
+ */
+function isCommandLine(trimmed: string): boolean {
+  // Fast path: no-paren structural keywords {{Else}}, {{EndIf}}
+  const noParen = /^\{\{(\w+)\}\}\s*$/.exec(trimmed);
+  if (noParen && NO_PAREN_KEYWORDS.includes(noParen[1] as (typeof NO_PAREN_KEYWORDS)[number])) {
+    return true;
+  }
+
+  let i = 2; // past {{
+
+  // Walk the command name
   while (i < trimmed.length && trimmed[i] !== "(" && trimmed[i] !== "}") i++;
   if (i >= trimmed.length || trimmed[i] !== "(") return false;
 
+  // Walk to the matching close-paren, respecting nesting
+  let depth = 1;
   i++;
-  while (i < trimmed.length && trimmed[i] !== ")") i++;
-  if (i >= trimmed.length) return false;
+  while (i < trimmed.length && depth > 0) {
+    if (trimmed[i] === "(") depth++;
+    else if (trimmed[i] === ")") depth--;
+    i++;
+  }
+  if (depth !== 0) return false;
 
-  i++;
+  // Expect }}
   if (i + 1 >= trimmed.length || trimmed[i] !== "}" || trimmed[i + 1] !== "}") return false;
   i += 2;
 
+  // Only trailing whitespace
   while (i < trimmed.length && trimmed[i] === " ") i++;
   return i === trimmed.length;
 }
+
+// ── Sub-tokenizers ─────────────────────────────────────────────────
 
 function tokenizeSpeaker(
   line: string,
@@ -139,12 +168,15 @@ function tokenizeCommand(
   );
 }
 
-// Inline tokenization precedence:
-// 1. \ + escapable  →  skip (literal text)
-// 2. ##             →  trailing metadata
-// 3. {{…}}          →  inline function
-// 4. $[a-zA-Z0-9]  →  variable
-// 5. anything else  →  plain text
+// ── Inline tokenisation (inside text lines) ────────────────────────
+//
+// Precedence:
+//   1. \ + escapable  →  skip (literal text)
+//   2. ##             →  trailing metadata (consumes rest of line)
+//   3. {{…}}          →  inline function
+//   4. $NAME          →  variable reference
+//   5. anything else  →  plain text
+
 function tokenizeTextLine(line: string, lineNum: number, out: Token[]): void {
   let i = 0;
   let textStart = 0;
@@ -189,10 +221,10 @@ function tokenizeTextLine(line: string, lineNum: number, out: Token[]): void {
       continue;
     }
 
-    if (line[i] === "$" && i + 1 < line.length && /[a-zA-Z0-9]/.test(line[i + 1])) {
+    if (line[i] === "$" && i + 1 < line.length && VAR_NAME_CHAR.test(line[i + 1])) {
       flushText(line, lineNum, textStart, i, out);
       let j = i + 1;
-      while (j < line.length && /[a-zA-Z0-9]/.test(line[j])) j++;
+      while (j < line.length && VAR_NAME_CHAR.test(line[j])) j++;
       const name = line.substring(i + 1, j);
       out.push(tok(TokenType.Variable, name, line.substring(i, j), lineNum, i, lineNum, j));
       i = j;
@@ -212,6 +244,8 @@ function flushText(line: string, lineNum: number, start: number, end: number, ou
   if (text.length === 0) return;
   out.push(tok(TokenType.Text, text, text, lineNum, start, lineNum, end));
 }
+
+// ── Token factory ──────────────────────────────────────────────────
 
 function tok(
   type: TokenType,
