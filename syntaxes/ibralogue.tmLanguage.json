@@ -5,6 +5,8 @@
   "patterns": [
     { "include": "#comment" },
     { "include": "#conversationCommand" },
+    { "include": "#conditionalCommand" },
+    { "include": "#variableCommand" },
     { "include": "#builtinCommand" },
     { "include": "#includeCommand" },
     { "include": "#speaker" },
@@ -19,6 +21,7 @@
         "2": { "name": "comment.line.number-sign.ibralogue" }
       }
     },
+
     "conversationCommand": {
       "match": "^\\s*(\\{\\{)(ConversationName)(\\()([^)]*)(\\))(\\}\\})\\s*$",
       "captures": {
@@ -30,17 +33,98 @@
         "6": { "name": "punctuation.definition.command.end.ibralogue" }
       }
     },
+
+    "conditionalCommand": {
+      "patterns": [
+        {
+          "comment": "{{If(expr)}} and {{ElseIf(expr)}} with parenthesised condition",
+          "match": "^\\s*(\\{\\{)(If|ElseIf)(\\()(.+)(\\))(\\}\\})\\s*$",
+          "captures": {
+            "1": { "name": "punctuation.definition.command.begin.ibralogue" },
+            "2": { "name": "keyword.control.conditional.ibralogue" },
+            "3": { "name": "punctuation.parenthesis.open.ibralogue" },
+            "4": {
+              "name": "meta.expression.ibralogue",
+              "patterns": [
+                { "include": "#expressionOperator" },
+                { "include": "#expressionLiteral" },
+                { "include": "#variable" }
+              ]
+            },
+            "5": { "name": "punctuation.parenthesis.close.ibralogue" },
+            "6": { "name": "punctuation.definition.command.end.ibralogue" }
+          }
+        },
+        {
+          "comment": "{{Else}} and {{EndIf}} — no arguments",
+          "match": "^\\s*(\\{\\{)(Else|EndIf)(\\}\\})\\s*$",
+          "captures": {
+            "1": { "name": "punctuation.definition.command.begin.ibralogue" },
+            "2": { "name": "keyword.control.conditional.ibralogue" },
+            "3": { "name": "punctuation.definition.command.end.ibralogue" }
+          }
+        }
+      ]
+    },
+
+    "variableCommand": {
+      "patterns": [
+        {
+          "comment": "{{Set($Var, expr)}}",
+          "match": "^\\s*(\\{\\{)(Set)(\\()(.+)(\\))(\\}\\})\\s*$",
+          "captures": {
+            "1": { "name": "punctuation.definition.command.begin.ibralogue" },
+            "2": { "name": "keyword.control.variable.ibralogue" },
+            "3": { "name": "punctuation.parenthesis.open.ibralogue" },
+            "4": {
+              "name": "meta.arguments.ibralogue",
+              "patterns": [
+                { "include": "#variable" },
+                { "include": "#expressionOperator" },
+                { "include": "#expressionLiteral" }
+              ]
+            },
+            "5": { "name": "punctuation.parenthesis.close.ibralogue" },
+            "6": { "name": "punctuation.definition.command.end.ibralogue" }
+          }
+        },
+        {
+          "comment": "{{Global($Var)}} or {{Global($Var, expr)}}",
+          "match": "^\\s*(\\{\\{)(Global)(\\()(.+)(\\))(\\}\\})\\s*$",
+          "captures": {
+            "1": { "name": "punctuation.definition.command.begin.ibralogue" },
+            "2": { "name": "keyword.control.variable.ibralogue" },
+            "3": { "name": "punctuation.parenthesis.open.ibralogue" },
+            "4": {
+              "name": "meta.arguments.ibralogue",
+              "patterns": [
+                { "include": "#variable" },
+                { "include": "#expressionOperator" },
+                { "include": "#expressionLiteral" }
+              ]
+            },
+            "5": { "name": "punctuation.parenthesis.close.ibralogue" },
+            "6": { "name": "punctuation.definition.command.end.ibralogue" }
+          }
+        }
+      ]
+    },
+
     "builtinCommand": {
-      "match": "^\\s*(\\{\\{)(Jump|Image)(\\()([^)]*)(\\))(\\}\\})\\s*$",
+      "match": "^\\s*(\\{\\{)(Jump|Image|Audio|Wait|Speed)(\\()([^)]*)(\\))(\\}\\})\\s*$",
       "captures": {
         "1": { "name": "punctuation.definition.command.begin.ibralogue" },
         "2": { "name": "keyword.control.builtin.ibralogue" },
         "3": { "name": "punctuation.parenthesis.open.ibralogue" },
-        "4": { "name": "string.unquoted.argument.ibralogue" },
+        "4": {
+          "name": "string.unquoted.argument.ibralogue",
+          "patterns": [{ "include": "#variable" }]
+        },
         "5": { "name": "punctuation.parenthesis.close.ibralogue" },
         "6": { "name": "punctuation.definition.command.end.ibralogue" }
       }
     },
+
     "includeCommand": {
       "match": "^\\s*(\\{\\{)(Include)(\\()([^)]*)(\\))(\\}\\})\\s*$",
       "captures": {
@@ -52,6 +136,7 @@
         "6": { "name": "punctuation.definition.command.end.ibralogue" }
       }
     },
+
     "speaker": {
       "match": "^\\s*(\\[)([^\\]]*)(\\])",
       "captures": {
@@ -63,6 +148,7 @@
         "3": { "name": "punctuation.definition.speaker.end.ibralogue" }
       }
     },
+
     "choice": {
       "match": "^\\s*(-)\\s+(.*?)(\\s*->\\s*)(\\S+)(.*)$",
       "captures": {
@@ -79,8 +165,9 @@
         "5": { "patterns": [{ "include": "#trailingMetadata" }] }
       }
     },
+
     "textLine": {
-      "begin": "^(?!\\s*#)(?!\\s*\\[)(?!\\s*-)(?!\\s*\\{\\{(?:ConversationName|Jump|Image|Include)\\()(?=\\S)",
+      "begin": "^(?!\\s*#)(?!\\s*\\[)(?!\\s*-)(?!\\s*\\{\\{(?:ConversationName|Jump|Image|Include|Audio|Wait|Speed|If|ElseIf|Else|EndIf|Set|Global)(?:[({])?)(?!\\s*\\{\\{(?:Else|EndIf)\\}\\})(?=\\S)",
       "end": "$",
       "patterns": [
         { "include": "#escapeSequence" },
@@ -90,6 +177,7 @@
         { "include": "#richTextTag" }
       ]
     },
+
     "inlineFunction": {
       "match": "(\\{\\{)([^}(]+)(?:(\\()([^)]*)(\\)))?(\\}\\})",
       "captures": {
@@ -104,13 +192,37 @@
         "6": { "name": "punctuation.definition.function.end.ibralogue" }
       }
     },
+
     "variable": {
-      "match": "(\\$)([a-zA-Z0-9]+)",
+      "match": "(\\$)([a-zA-Z0-9_]+)",
       "captures": {
         "1": { "name": "punctuation.definition.variable.ibralogue" },
         "2": { "name": "variable.other.global.ibralogue" }
       }
     },
+
+    "expressionOperator": {
+      "match": "\\b(AND|OR|NOT)\\b|[=!<>]=?|[+\\-*/]",
+      "name": "keyword.operator.expression.ibralogue"
+    },
+
+    "expressionLiteral": {
+      "patterns": [
+        {
+          "match": "\\b(true|false)\\b",
+          "name": "constant.language.boolean.ibralogue"
+        },
+        {
+          "match": "\\b\\d+(\\.\\d+)?\\b",
+          "name": "constant.numeric.ibralogue"
+        },
+        {
+          "match": "\"[^\"]*\"",
+          "name": "string.quoted.double.ibralogue"
+        }
+      ]
+    },
+
     "trailingMetadata": {
       "match": "(##)\\s*(.*?)\\s*$",
       "captures": {
@@ -137,10 +249,12 @@
         }
       }
     },
+
     "escapeSequence": {
       "match": "\\\\(\\{\\{|\\$|##|#|\\[|\\-|\\\\)",
       "name": "constant.character.escape.ibralogue"
     },
+
     "richTextTag": {
       "match": "</?[a-zA-Z][^>]*>",
       "name": "meta.tag.richtext.ibralogue"

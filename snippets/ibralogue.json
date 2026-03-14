@@ -18,6 +18,15 @@
     ],
     "description": "New speaker with dialogue"
   },
+  "Silent Line": {
+    "prefix": "silent",
+    "body": [
+      "[>>]",
+      "${1:{{FunctionName}}}",
+      "$0"
+    ],
+    "description": "Silent line that runs invocations without showing dialogue"
+  },
   "Choice": {
     "prefix": "choice",
     "body": [
@@ -25,12 +34,63 @@
     ],
     "description": "Choice declaration"
   },
+  "Continue Choice": {
+    "prefix": "choicec",
+    "body": [
+      "- ${1:Choice text} -> >>$0"
+    ],
+    "description": "Choice that continues in the current conversation"
+  },
   "Choice with Metadata": {
     "prefix": "choicem",
     "body": [
       "- ${1:Choice text} -> ${2:TargetConversation} ## ${3:key}:${4:value}$0"
     ],
     "description": "Choice with metadata"
+  },
+  "If/Else/EndIf": {
+    "prefix": "if",
+    "body": [
+      "{{If(${1:condition})}}",
+      "${2:content}",
+      "{{Else}}",
+      "${3:alternate}",
+      "{{EndIf}}",
+      "$0"
+    ],
+    "description": "Conditional block with If/Else"
+  },
+  "If/EndIf": {
+    "prefix": "iff",
+    "body": [
+      "{{If(${1:condition})}}",
+      "${2:content}",
+      "{{EndIf}}",
+      "$0"
+    ],
+    "description": "Conditional block without Else"
+  },
+  "ElseIf": {
+    "prefix": "elif",
+    "body": [
+      "{{ElseIf(${1:condition})}}",
+      "$0"
+    ],
+    "description": "ElseIf branch"
+  },
+  "Set Variable": {
+    "prefix": "set",
+    "body": [
+      "{{Set(\\$${1:VARIABLE}, ${2:value})}}$0"
+    ],
+    "description": "Assign a variable value"
+  },
+  "Global Variable": {
+    "prefix": "global",
+    "body": [
+      "{{Global(\\$${1:VARIABLE}, ${2:value})}}$0"
+    ],
+    "description": "Declare a global variable"
   },
   "Jump": {
     "prefix": "jump",
@@ -45,6 +105,27 @@
       "{{Image(${1:Sprites/Path})}}$0"
     ],
     "description": "Set speaker portrait"
+  },
+  "Audio": {
+    "prefix": "audio",
+    "body": [
+      "{{Audio(${1:ClipId})}}$0"
+    ],
+    "description": "Play an audio clip"
+  },
+  "Wait": {
+    "prefix": "wait",
+    "body": [
+      "{{Wait(${1:seconds})}}$0"
+    ],
+    "description": "Pause display for a duration"
+  },
+  "Speed": {
+    "prefix": "speed",
+    "body": [
+      "{{Speed(${1:multiplier})}}$0"
+    ],
+    "description": "Change text reveal speed"
   },
   "Include": {
     "prefix": "include",
@@ -72,7 +153,7 @@
     "body": [
       "\\$${1:VARIABLENAME}$0"
     ],
-    "description": "Global variable reference"
+    "description": "Variable reference"
   },
   "Metadata": {
     "prefix": "meta",

@@ -37,6 +37,16 @@ export function getFoldingRanges(
         });
       }
     }
+
+    for (const cond of conv.conditionals) {
+      if (cond.range.end.line > cond.range.start.line) {
+        ranges.push({
+          startLine: cond.range.start.line,
+          endLine: cond.range.end.line,
+          kind: FoldingRangeKind.Region,
+        });
+      }
+    }
   }
 
   foldCommentBlocks(tokens, ranges);

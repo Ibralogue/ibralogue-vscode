@@ -1,4 +1,5 @@
 import { DialogueTree } from "../parser/ast";
+import { CONTINUE_TARGET } from "../parser/keywords";
 
 export interface DialogueGraph {
   conversations: ConversationNode[];
@@ -30,6 +31,7 @@ export interface ChoicePreview {
   text: string;
   target: string;
   line: number;
+  isContinue: boolean;
 }
 
 export interface Edge {
@@ -46,7 +48,7 @@ export function buildDialogueGraph(ast: DialogueTree): DialogueGraph {
 
   for (const conv of ast.conversations) {
     for (const choice of conv.choices) {
-      if (choice.target) {
+      if (choice.target && choice.target !== CONTINUE_TARGET) {
         edges.push({ from: conv.name, to: choice.target, type: "choice", label: choice.text });
         referenced.add(choice.target);
       }
@@ -84,6 +86,7 @@ export function buildDialogueGraph(ast: DialogueTree): DialogueGraph {
       text: c.text,
       target: c.target,
       line: c.range.start.line,
+      isContinue: c.isContinue,
     }));
 
     return {

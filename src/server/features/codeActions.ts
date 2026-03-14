@@ -35,6 +35,9 @@ export function getCodeActions(
       case "IBR110":
         actions.push(renameDuplicate(uri, diag));
         break;
+      case "IBR115":
+        actions.push(insertEndIf(uri, diag));
+        break;
     }
   }
 
@@ -42,94 +45,53 @@ export function getCodeActions(
 }
 
 function closeSpeakerTag(uri: string, diag: Diagnostic): CodeAction {
-  const edit: WorkspaceEdit = {
-    changes: {
-      [uri]: [TextEdit.insert(diag.range.end, "]")],
-    },
-  };
-
-  return {
-    title: "Close speaker tag",
-    kind: CodeActionKind.QuickFix,
-    diagnostics: [diag],
-    edit,
-  };
+  return quickFix("Close speaker tag", uri, diag, [
+    TextEdit.insert(diag.range.end, "]"),
+  ]);
 }
 
 function closeFunctionInvocation(uri: string, diag: Diagnostic): CodeAction {
-  const edit: WorkspaceEdit = {
-    changes: {
-      [uri]: [TextEdit.insert(diag.range.end, "}}")],
-    },
-  };
-
-  return {
-    title: "Close function invocation",
-    kind: CodeActionKind.QuickFix,
-    diagnostics: [diag],
-    edit,
-  };
+  return quickFix("Close function invocation", uri, diag, [
+    TextEdit.insert(diag.range.end, "}}"),
+  ]);
 }
 
 function insertArrowSeparator(uri: string, diag: Diagnostic): CodeAction {
-  const line = diag.range.end.line;
-  const endChar = diag.range.end.character;
-
-  const edit: WorkspaceEdit = {
-    changes: {
-      [uri]: [
-        TextEdit.insert({ line, character: endChar }, " -> Target"),
-      ],
-    },
-  };
-
-  return {
-    title: "Insert '->' separator",
-    kind: CodeActionKind.QuickFix,
-    diagnostics: [diag],
-    edit,
-  };
+  return quickFix("Insert '->' separator", uri, diag, [
+    TextEdit.insert(diag.range.end, " -> Target"),
+  ]);
 }
 
-function createConversation(
-  uri: string,
-  diag: Diagnostic,
-  ast: DialogueTree,
-): CodeAction {
+function createConversation(uri: string, diag: Diagnostic, ast: DialogueTree): CodeAction {
   const name = extractNameFromMessage(diag.message);
   const lastConv = ast.conversations[ast.conversations.length - 1];
   const insertLine = lastConv ? lastConv.fullRange.end.line + 1 : 0;
-
   const newBlock = `\n{{ConversationName(${name})}}\n[Speaker]\n`;
-  const edit: WorkspaceEdit = {
-    changes: {
-      [uri]: [TextEdit.insert({ line: insertLine, character: 0 }, newBlock)],
-    },
-  };
-
-  return {
-    title: `Create conversation '${name}'`,
-    kind: CodeActionKind.QuickFix,
-    diagnostics: [diag],
-    edit,
-  };
+  return quickFix(`Create conversation '${name}'`, uri, diag, [
+    TextEdit.insert({ line: insertLine, character: 0 }, newBlock),
+  ]);
 }
 
 function renameDuplicate(uri: string, diag: Diagnostic): CodeAction {
   const name = extractNameFromMessage(diag.message);
-  const newName = name + "2";
+  return quickFix(`Rename to '${name}2'`, uri, diag, [
+    TextEdit.replace(diag.range, name + "2"),
+  ]);
+}
 
-  const edit: WorkspaceEdit = {
-    changes: {
-      [uri]: [TextEdit.replace(diag.range, newName)],
-    },
-  };
+function insertEndIf(uri: string, diag: Diagnostic): CodeAction {
+  const insertLine = diag.range.end.line + 1;
+  return quickFix("Insert {{EndIf}}", uri, diag, [
+    TextEdit.insert({ line: insertLine, character: 0 }, "{{EndIf}}\n"),
+  ]);
+}
 
+function quickFix(title: string, uri: string, diag: Diagnostic, edits: TextEdit[]): CodeAction {
   return {
-    title: `Rename to '${newName}'`,
+    title,
     kind: CodeActionKind.QuickFix,
     diagnostics: [diag],
-    edit,
+    edit: { changes: { [uri]: edits } },
   };
 }
 

@@ -1,6 +1,7 @@
 import { Hover, MarkupKind, Position } from "vscode-languageserver/node";
 import { DialogueTree } from "../parser/ast";
 import { DocumentIndex, findSymbolAt } from "./documentIndex";
+import { SILENT_SPEAKER, CONTINUE_TARGET } from "../parser/keywords";
 
 export function getHover(
   position: Position,
@@ -14,6 +15,10 @@ export function getHover(
 
   switch (sym.kind) {
     case "speaker": {
+      if (sym.name === SILENT_SPEAKER) {
+        md = `**Silent Line**: [${SILENT_SPEAKER}]\n\nRuns invocations without displaying anything in the dialogue view.`;
+        break;
+      }
       const count = index.speakers.get(sym.name)?.length ?? 0;
       md = `**Speaker**: ${sym.name}\n\nAppears in ${count} dialogue line(s).`;
       break;
@@ -29,6 +34,10 @@ export function getHover(
     }
 
     case "choiceTarget": {
+      if (sym.name === CONTINUE_TARGET) {
+        md = `**Continue**: -> ${CONTINUE_TARGET}\n\nContinues the dialogue in the current conversation without jumping.`;
+        break;
+      }
       const def = index.conversationDefs.get(sym.name);
       const loc = def ? `line ${def.commandRange!.start.line + 1}` : "not defined";
       md = `**Choice Target**: -> ${sym.name}\n\nDefined at ${loc}.`;
@@ -44,7 +53,7 @@ export function getHover(
 
     case "variable": {
       const count = index.variables.get(sym.name)?.length ?? 0;
-      md = `**Global Variable**: $${sym.name}\n\nReferenced ${count} time(s) in this file.`;
+      md = `**Variable**: $${sym.name}\n\nReferenced ${count} time(s) in this file.`;
       break;
     }
 
@@ -79,17 +88,35 @@ function countConversationRefs(name: string, index: DocumentIndex): number {
   return count;
 }
 
+const KEYWORD_DOCS: Record<string, string> = {
+  ConversationName:
+    "**ConversationName**(Name)\n\nNames the following conversation block. Everything after this line belongs to this conversation.",
+  Jump:
+    "**Jump**(Target)\n\nAuto-jumps to the target conversation after the current dialogue line finishes.",
+  Image:
+    "**Image**(Path)\n\nSets the speaker portrait image for the current dialogue line via the `PortraitImagePlugin`.",
+  Include:
+    "**Include**(Asset[, Conversation])\n\nInserts content from another .ibra file at this location during preprocessing.",
+  Audio:
+    "**Audio**(ClipId)\n\nPlays an audio clip via the engine's `IAudioProvider`. Fires at its text position when inline.",
+  Wait:
+    "**Wait**(Seconds)\n\nPauses the display for the given duration. Meaningful with animated dialogue views.",
+  Speed:
+    "**Speed**(Multiplier)\n\nChanges the text reveal speed. 2 = twice as fast, 0.5 = half speed. Affects animated views only.",
+  If:
+    "**If**(Condition)\n\nConditional block. The body is shown only when the condition evaluates to true at runtime.",
+  ElseIf:
+    "**ElseIf**(Condition)\n\nAlternative branch checked when prior conditions were false.",
+  Else:
+    "**Else**\n\nFallback branch executed when no prior `If`/`ElseIf` condition matched.",
+  EndIf:
+    "**EndIf**\n\nCloses a conditional block started by `{{If(...)}}`. Required.",
+  Set:
+    "**Set**($Variable, Expression)\n\nAssigns a value to a variable. Creates a local variable if it doesn't exist.",
+  Global:
+    "**Global**($Variable[, Expression])\n\nDeclares or updates a global variable that persists across all dialogue files.",
+};
+
 function commandKeywordDocs(name: string): string {
-  switch (name) {
-    case "ConversationName":
-      return "**ConversationName**(Name)\n\nNames the following conversation block. Everything after this line belongs to this conversation.";
-    case "Jump":
-      return "**Jump**(Target)\n\nAuto-jumps to the target conversation after the current dialogue line finishes.";
-    case "Image":
-      return "**Image**(Path)\n\nSets the speaker portrait image for the current dialogue line.";
-    case "Include":
-      return "**Include**(Asset[, Conversation])\n\nInserts content from another .ibra file at this location during preprocessing.";
-    default:
-      return `**${name}**`;
-  }
+  return KEYWORD_DOCS[name] ?? `**${name}**`;
 }

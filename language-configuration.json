@@ -25,14 +25,14 @@
   ],
   "folding": {
     "markers": {
-      "start": "^\\s*\\{\\{ConversationName\\(",
-      "end": "^(?=\\s*\\{\\{ConversationName\\()"
+      "start": "^\\s*\\{\\{(?:ConversationName\\(|If\\()",
+      "end": "^(?=\\s*\\{\\{(?:ConversationName\\(|EndIf\\}\\}))"
     }
   },
   "wordPattern": "[a-zA-Z0-9_$]+",
   "indentationRules": {
-    "increaseIndentPattern": "^\\s*\\[.+\\]\\s*$",
-    "decreaseIndentPattern": "^$"
+    "increaseIndentPattern": "^\\s*(?:\\[.+\\]|\\{\\{If\\(.+\\)\\}\\})\\s*$",
+    "decreaseIndentPattern": "^\\s*(?:\\{\\{(?:EndIf|Else|ElseIf))"
   },
   "onEnterRules": [
     {

@@ -2,12 +2,9 @@ import { DocumentSymbol, SymbolKind, Range } from "vscode-languageserver/node";
 import { DialogueTree, Conversation, DialogueLine, Sentence, ChoiceNode, Range as AstRange } from "../parser/ast";
 
 export function getDocumentSymbols(ast: DialogueTree): DocumentSymbol[] {
-  const symbols: DocumentSymbol[] = [];
-  for (const conv of ast.conversations) {
-    const sym = buildConversationSymbol(conv);
-    if (sym) symbols.push(sym);
-  }
-  return symbols;
+  return ast.conversations
+    .map(buildConversationSymbol)
+    .filter((s): s is DocumentSymbol => s !== null);
 }
 
 function buildConversationSymbol(conv: Conversation): DocumentSymbol | null {
@@ -21,8 +18,38 @@ function buildConversationSymbol(conv: Conversation): DocumentSymbol | null {
   }
 
   for (const choice of conv.choices) {
-    const sym = buildChoiceSymbol(choice, range);
-    if (sym) children.push(sym);
+    children.push(buildChoiceSymbol(choice, range));
+  }
+
+  for (const cond of conv.conditionals) {
+    const condRange = enclose(cond.range, range);
+    const keywords = cond.branches.map((b) => b.keyword).join("/");
+    children.push({
+      name: `{{${keywords}}}`,
+      kind: SymbolKind.Boolean,
+      range: condRange,
+      selectionRange: clamp(cond.branches[0].keywordRange, condRange),
+    });
+  }
+
+  for (const set of conv.setCommands) {
+    const sr = enclose(set.range, range);
+    children.push({
+      name: `{{Set($${set.variableName})}}`,
+      kind: SymbolKind.Variable,
+      range: sr,
+      selectionRange: clamp(set.variableRange, sr),
+    });
+  }
+
+  for (const g of conv.globalDecls) {
+    const gr = enclose(g.range, range);
+    children.push({
+      name: `{{Global($${g.variableName})}}`,
+      kind: SymbolKind.Variable,
+      range: gr,
+      selectionRange: clamp(g.variableRange, gr),
+    });
   }
 
   return {

@@ -6,12 +6,16 @@ import {
 } from "vscode-languageserver/node";
 import { DocumentIndex } from "./documentIndex";
 import { DialogueTree } from "../parser/ast";
+import { CONTINUE_TARGET, SILENT_SPEAKER } from "../parser/keywords";
 
 type Context =
   | "commandOrFunc"
   | "jumpArg"
   | "includeAsset"
   | "includeConv"
+  | "setArg"
+  | "globalArg"
+  | "ifArg"
   | "funcArg"
   | "speaker"
   | "variable"
@@ -34,11 +38,14 @@ export function getCompletions(
       return commandAndFunctionCompletions(index);
     case "jumpArg":
     case "choiceTarget":
-      return conversationCompletions(ast, index);
+      return conversationCompletions(ast, index, ctx === "choiceTarget");
     case "includeAsset":
       return [];
     case "includeConv":
-      return conversationCompletions(ast, index);
+      return conversationCompletions(ast, index, false);
+    case "setArg":
+    case "globalArg":
+    case "ifArg":
     case "funcArg":
     case "variable":
       return variableCompletions(index);
@@ -53,6 +60,8 @@ export function getCompletions(
   }
 }
 
+// ── Context Detection ───────────────────────────────────────────────
+
 function detectContext(textBefore: string, _fullLine: string): Context {
   const lastOpen = textBefore.lastIndexOf("{{");
   const lastClose = textBefore.lastIndexOf("}}");
@@ -62,6 +71,8 @@ function detectContext(textBefore: string, _fullLine: string): Context {
       const funcName = inside.substring(0, inside.indexOf("(")).trim();
       if (funcName === "Jump") return "jumpArg";
       if (funcName === "Include") return inside.includes(",") ? "includeConv" : "includeAsset";
+      if (funcName === "Set" || funcName === "Global") return inside.includes(",") ? "variable" : "setArg";
+      if (funcName === "If" || funcName === "ElseIf") return "ifArg";
       return "funcArg";
     }
     return "commandOrFunc";
@@ -71,7 +82,7 @@ function detectContext(textBefore: string, _fullLine: string): Context {
   const lastBracketClose = textBefore.lastIndexOf("]");
   if (lastBracket !== -1 && lastBracket > lastBracketClose) return "speaker";
 
-  if (/\$[a-zA-Z0-9]*$/.test(textBefore)) return "variable";
+  if (/\$[a-zA-Z0-9_]*$/.test(textBefore)) return "variable";
 
   const trimmed = textBefore.trimStart();
   if (trimmed.startsWith("-") && textBefore.includes("->")) return "choiceTarget";
@@ -81,36 +92,23 @@ function detectContext(textBefore: string, _fullLine: string): Context {
   return "none";
 }
 
+// ── Completion Providers ────────────────────────────────────────────
+
 function commandAndFunctionCompletions(index: DocumentIndex): CompletionItem[] {
   const items: CompletionItem[] = [
-    {
-      label: "ConversationName",
-      kind: CompletionItemKind.Keyword,
-      insertText: "ConversationName($1)",
-      insertTextFormat: InsertTextFormat.Snippet,
-      detail: "Names this conversation block",
-    },
-    {
-      label: "Jump",
-      kind: CompletionItemKind.Keyword,
-      insertText: "Jump($1)",
-      insertTextFormat: InsertTextFormat.Snippet,
-      detail: "Jump to another conversation",
-    },
-    {
-      label: "Image",
-      kind: CompletionItemKind.Keyword,
-      insertText: "Image($1)",
-      insertTextFormat: InsertTextFormat.Snippet,
-      detail: "Set speaker portrait image",
-    },
-    {
-      label: "Include",
-      kind: CompletionItemKind.Keyword,
-      insertText: "Include($1)",
-      insertTextFormat: InsertTextFormat.Snippet,
-      detail: "Include another dialogue file",
-    },
+    kwSnippet("ConversationName", "ConversationName($1)", "Names this conversation block"),
+    kwSnippet("Jump", "Jump($1)", "Jump to another conversation"),
+    kwSnippet("Image", "Image($1)", "Set speaker portrait image"),
+    kwSnippet("Include", "Include($1)", "Include another dialogue file"),
+    kwSnippet("Audio", "Audio($1)", "Play an audio clip"),
+    kwSnippet("Wait", "Wait($1)", "Pause display for N seconds"),
+    kwSnippet("Speed", "Speed($1)", "Change text reveal speed multiplier"),
+    kwSnippet("If", "If($1)", "Conditional block — show content when condition is true"),
+    kwSnippet("ElseIf", "ElseIf($1)", "Alternative condition branch"),
+    kw("Else", "Else branch — shown when no prior condition matched"),
+    kw("EndIf", "Closes a conditional block"),
+    kwSnippet("Set", "Set(\\$$1, $2)", "Assign a variable value"),
+    kwSnippet("Global", "Global(\\$$1, $2)", "Declare a global variable"),
   ];
 
   for (const name of index.functions.keys()) {
@@ -124,8 +122,12 @@ function commandAndFunctionCompletions(index: DocumentIndex): CompletionItem[] {
   return items;
 }
 
-function conversationCompletions(ast: DialogueTree, index: DocumentIndex): CompletionItem[] {
-  return ast.conversations.map((conv) => {
+function conversationCompletions(
+  ast: DialogueTree,
+  index: DocumentIndex,
+  includeContinue: boolean,
+): CompletionItem[] {
+  const items: CompletionItem[] = ast.conversations.map((conv) => {
     const def = index.conversationDefs.get(conv.name);
     const line = def?.commandRange?.start.line;
     return {
@@ -134,22 +136,40 @@ function conversationCompletions(ast: DialogueTree, index: DocumentIndex): Compl
       detail: line != null ? `Defined at line ${line + 1}` : "Default conversation",
     };
   });
+
+  if (includeContinue) {
+    items.push({
+      label: CONTINUE_TARGET,
+      kind: CompletionItemKind.Keyword,
+      detail: "Continue in the current conversation without jumping",
+    });
+  }
+
+  return items;
 }
 
 function variableCompletions(index: DocumentIndex): CompletionItem[] {
   return [...index.variables.entries()].map(([name, ranges]) => ({
     label: name,
     kind: CompletionItemKind.Variable,
-    detail: `Global variable (${ranges.length} references)`,
+    detail: `Variable (${ranges.length} references)`,
   }));
 }
 
 function speakerCompletions(index: DocumentIndex): CompletionItem[] {
-  return [...index.speakers.entries()].map(([name, ranges]) => ({
+  const items: CompletionItem[] = [...index.speakers.entries()].map(([name, ranges]) => ({
     label: name,
     kind: CompletionItemKind.Value,
     detail: `Speaker (used ${ranges.length} times)`,
   }));
+
+  items.push({
+    label: SILENT_SPEAKER,
+    kind: CompletionItemKind.Keyword,
+    detail: "Silent line — runs invocations without showing dialogue",
+  });
+
+  return items;
 }
 
 function metadataCompletions(index: DocumentIndex): CompletionItem[] {
@@ -170,4 +190,24 @@ function choiceSnippetCompletion(): CompletionItem[] {
       detail: "Choice declaration",
     },
   ];
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+function kwSnippet(label: string, insertText: string, detail: string): CompletionItem {
+  return {
+    label,
+    kind: CompletionItemKind.Keyword,
+    insertText,
+    insertTextFormat: InsertTextFormat.Snippet,
+    detail,
+  };
+}
+
+function kw(label: string, detail: string): CompletionItem {
+  return {
+    label,
+    kind: CompletionItemKind.Keyword,
+    detail,
+  };
 }

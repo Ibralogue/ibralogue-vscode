@@ -4,6 +4,7 @@ import {
   SemanticTokens,
 } from "vscode-languageserver/node";
 import { DialogueTree, Token, TokenType, Range as AstRange } from "../parser/ast";
+import { ALL_KEYWORD_SET } from "../parser/keywords";
 
 export const TOKEN_TYPES = [
   "namespace",
@@ -65,87 +66,107 @@ export function getSemanticTokens(
   }
 
   for (const conv of ast.conversations) {
-    if (conv.commandRange) {
-      const cmdLine = conv.commandRange.start.line;
-      const cmdStart = conv.commandRange.start.character;
-      push(b, {
-        start: { line: cmdLine, character: cmdStart + 2 },
-        end: { line: cmdLine, character: cmdStart + 2 + "ConversationName".length },
-      }, "keyword", modBits("defaultLibrary"));
-    }
-
-    if (conv.nameRange) {
-      push(b, conv.nameRange, "namespace", modBits("declaration"));
-    }
-
-    for (const dl of conv.dialogueLines) {
-      const sRange = innerSpeakerRange(dl.speakerRange);
-      push(b, sRange, "string", 0);
-
-      if (dl.image) {
-        const imgLine = dl.image.range.start.line;
-        const imgStart = dl.image.range.start.character;
-        push(b, {
-          start: { line: imgLine, character: imgStart + 2 },
-          end: { line: imgLine, character: imgStart + 2 + "Image".length },
-        }, "keyword", modBits("defaultLibrary"));
-        push(b, dl.image.pathRange, "string", 0);
-      }
-
-      if (dl.jump) {
-        const jLine = dl.jump.range.start.line;
-        const jStart = dl.jump.range.start.character;
-        push(b, {
-          start: { line: jLine, character: jStart + 2 },
-          end: { line: jLine, character: jStart + 2 + "Jump".length },
-        }, "keyword", modBits("defaultLibrary"));
-        push(b, dl.jump.targetRange, "namespace", 0);
-      }
-
-      for (const sent of dl.sentences) {
-        for (const frag of sent.fragments) {
-          if (frag.kind === "function") {
-            push(b, frag.nameRange, "function", 0);
-            pushFunctionArgs(b, frag.range, frag.args);
-          }
-          if (frag.kind === "variable") {
-            push(b, frag.range, "variable", modBits("readonly"));
-          }
-          if (frag.kind === "escape") {
-            push(b, frag.range, "string", 0);
-          }
-        }
-
-        if (sent.metadata) {
-          for (const m of sent.metadata) {
-            push(b, m.keyRange, "property", 0);
-            if (m.valueRange) push(b, m.valueRange, "string", 0);
-          }
-        }
-
-        pushRichTextTags(b, sent.range, sent.fragments);
-      }
-    }
-
-    for (const choice of conv.choices) {
-      push(b, choice.textRange, "string", 0);
-
-      if (choice.arrowRange.start.character !== choice.arrowRange.end.character) {
-        push(b, choice.arrowRange, "operator", 0);
-      }
-
-      if (choice.target) {
-        push(b, choice.targetRange, "namespace", 0);
-      }
-
-      for (const m of choice.metadata) {
-        push(b, m.keyRange, "property", 0);
-        if (m.valueRange) push(b, m.valueRange, "string", 0);
-      }
-    }
+    tokenizeConversationHeader(b, conv);
+    tokenizeDialogueLines(b, conv);
+    tokenizeChoices(b, conv);
+    tokenizeConditionals(b, conv);
+    tokenizeVariableCommands(b, conv);
   }
 
   return b.build();
+}
+
+function tokenizeConversationHeader(b: SemanticTokensBuilder, conv: DialogueTree["conversations"][number]) {
+  if (conv.commandRange) {
+    push(b, kwRange(conv.commandRange, "ConversationName"), "keyword", modBits("defaultLibrary"));
+  }
+  if (conv.nameRange) {
+    push(b, conv.nameRange, "namespace", modBits("declaration"));
+  }
+}
+
+function tokenizeDialogueLines(b: SemanticTokensBuilder, conv: DialogueTree["conversations"][number]) {
+  for (const dl of conv.dialogueLines) {
+    push(b, innerSpeakerRange(dl.speakerRange), "string", 0);
+
+    if (dl.image) {
+      push(b, kwRange(dl.image.range, "Image"), "keyword", modBits("defaultLibrary"));
+      push(b, dl.image.pathRange, "string", 0);
+    }
+
+    if (dl.jump) {
+      push(b, kwRange(dl.jump.range, "Jump"), "keyword", modBits("defaultLibrary"));
+      push(b, dl.jump.targetRange, "namespace", 0);
+    }
+
+    for (const sent of dl.sentences) {
+      for (const frag of sent.fragments) {
+        if (frag.kind === "function") {
+          if (ALL_KEYWORD_SET.has(frag.name)) {
+            push(b, frag.nameRange, "keyword", modBits("defaultLibrary"));
+          } else {
+            push(b, frag.nameRange, "function", 0);
+          }
+        }
+        if (frag.kind === "variable") {
+          push(b, frag.range, "variable", modBits("readonly"));
+        }
+        if (frag.kind === "escape") {
+          push(b, frag.range, "string", 0);
+        }
+      }
+
+      if (sent.metadata) {
+        for (const m of sent.metadata) {
+          push(b, m.keyRange, "property", 0);
+          if (m.valueRange) push(b, m.valueRange, "string", 0);
+        }
+      }
+
+      pushRichTextTags(b, sent.fragments);
+    }
+  }
+}
+
+function tokenizeChoices(b: SemanticTokensBuilder, conv: DialogueTree["conversations"][number]) {
+  for (const choice of conv.choices) {
+    push(b, choice.textRange, "string", 0);
+
+    if (choice.arrowRange.start.character !== choice.arrowRange.end.character) {
+      push(b, choice.arrowRange, "operator", 0);
+    }
+
+    if (choice.target) {
+      push(b, choice.targetRange, choice.isContinue ? "keyword" : "namespace", 0);
+    }
+
+    for (const m of choice.metadata) {
+      push(b, m.keyRange, "property", 0);
+      if (m.valueRange) push(b, m.valueRange, "string", 0);
+    }
+  }
+}
+
+function tokenizeConditionals(b: SemanticTokensBuilder, conv: DialogueTree["conversations"][number]) {
+  for (const cond of conv.conditionals) {
+    for (const branch of cond.branches) {
+      push(b, branch.keywordRange, "keyword", modBits("defaultLibrary"));
+    }
+  }
+  // EndIf keywords that closed blocks are part of the conditional range end,
+  // but branches only store If/ElseIf/Else. EndIf is handled via commandKeywords
+  // in the document index which is used by the grammar for highlighting.
+}
+
+function tokenizeVariableCommands(b: SemanticTokensBuilder, conv: DialogueTree["conversations"][number]) {
+  for (const set of conv.setCommands) {
+    push(b, kwRange(set.range, "Set"), "keyword", modBits("defaultLibrary"));
+    push(b, set.variableRange, "variable", modBits("readonly"));
+  }
+  for (const g of conv.globalDecls) {
+    push(b, kwRange(g.range, "Global"), "keyword", modBits("defaultLibrary"));
+    push(b, g.variableRange, "variable", modBits("readonly"));
+  }
 }
 
 function innerSpeakerRange(r: AstRange): AstRange {
@@ -155,21 +176,17 @@ function innerSpeakerRange(r: AstRange): AstRange {
   };
 }
 
-function pushFunctionArgs(
-  b: SemanticTokensBuilder,
-  funcRange: AstRange,
-  args: string[],
-) {
-  if (args.length === 0) return;
-  // We don't have precise arg ranges from the AST fragment, so skip sub-arg tokens
-  // The TextMate grammar handles basic arg highlighting
+function kwRange(commandRange: AstRange, name: string): AstRange {
+  return {
+    start: { line: commandRange.start.line, character: commandRange.start.character + 2 },
+    end: { line: commandRange.start.line, character: commandRange.start.character + 2 + name.length },
+  };
 }
 
-const RICH_TEXT_RE = /<\/?(?:b|i|u|s|sup|sub|color(?:=[^>]*)?)>/g;
+const RICH_TEXT_RE = /<\/?(?:b|i|u|s|sup|sub|size(?:=[^>]*)?|color(?:=[^>]*)?|sprite[^>]*)>/g;
 
 function pushRichTextTags(
   b: SemanticTokensBuilder,
-  sentRange: AstRange,
   fragments: readonly { kind: string; range: AstRange; value?: string }[],
 ) {
   for (const frag of fragments) {
