@@ -1,4 +1,6 @@
-# Ibralogue
+# Ibralogue for VSCode
+
+[**Get The Extension**](https://marketplace.visualstudio.com/items?itemName=Ibra.ibralogue)
 
 Language support for the [Ibralogue](https://github.com/Ibralogue) dialogue language in Visual Studio Code.
 
