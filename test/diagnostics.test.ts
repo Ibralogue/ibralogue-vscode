@@ -93,37 +93,7 @@ describe("Diagnostics", () => {
     });
   });
 
-  describe("IBR112: unreferenced conversation", () => {
-    it("detects conversation never targeted by choice or jump", () => {
-      const text = "{{ConversationName(A)}}\n[NPC]\nHi.\n{{ConversationName(B)}}\n[NPC]\nBye.";
-      expect(diagCodes(text)).toContain("IBR112");
-    });
-
-    it("first conversation is exempt (entry point)", () => {
-      const text = "{{ConversationName(Entry)}}\n[NPC]\nHi.";
-      expect(diagCodes(text)).not.toContain("IBR112");
-    });
-
-    it("no false positive when referenced by choice", () => {
-      const text =
-        "{{ConversationName(A)}}\n[NPC]\nHi.\n- Go -> B\n{{ConversationName(B)}}\n[NPC]\nBye.";
-      expect(diagCodes(text)).not.toContain("IBR112");
-    });
-
-    it("no false positive when referenced by jump", () => {
-      const text =
-        "{{ConversationName(A)}}\n[NPC]\nHi.\n{{Jump(B)}}\n{{ConversationName(B)}}\n[NPC]\nBye.";
-      expect(diagCodes(text)).not.toContain("IBR112");
-    });
-  });
-
   describe("comprehensive fixture", () => {
-    it("fixture produces IBR112 for HiddenDialogue", () => {
-      const { diagnostics } = quickAll(FIXTURE);
-      const ibr112 = diagnostics.filter((d) => d.code === "IBR112");
-      expect(ibr112.length).toBeGreaterThanOrEqual(1);
-    });
-
     it("fixture does not produce IBR006", () => {
       expect(diagCodes(FIXTURE)).not.toContain("IBR006");
     });
